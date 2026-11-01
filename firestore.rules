@@ -1,0 +1,88 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global deny-all catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Test connection document for initial boot verification
+    match /test/connection {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId || resource.data.id == request.auth.uid);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(userId) && incoming().id == userId;
+      allow update: if isSignedIn() && request.auth.uid == userId;
+      allow delete: if false;
+    }
+
+    // Classes collection
+    match /classes/{classId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && isValidId(classId);
+    }
+
+    // Students collection
+    match /students/{studentId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && isValidId(studentId);
+    }
+
+    // Guardians collection (Ba mẹ học sinh)
+    match /guardians/{guardianId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && isValidId(guardianId);
+    }
+
+    // Question Bank (Ngân hàng câu hỏi)
+    match /questions/{questionId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && isValidId(questionId);
+    }
+
+    // Assignments
+    match /assignments/{assignmentId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && isValidId(assignmentId);
+    }
+
+    // Attendance
+    match /attendance/{attendanceId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && isValidId(attendanceId);
+    }
+
+    // Announcements
+    match /announcements/{announcementId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && isValidId(announcementId);
+    }
+  }
+}
